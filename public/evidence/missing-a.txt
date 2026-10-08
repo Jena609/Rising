@@ -1,0 +1,6 @@
+Rising-Evidence
+Basin: green-valley
+Kind: reservoir
+Freshness: missing
+Observed: none
+This is a fictional testnet gauge page. It is not a government measurement.

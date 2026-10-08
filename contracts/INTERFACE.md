@@ -19,6 +19,6 @@ Use the real deployed interface if the names or argument types differ. Put that 
 
 `contracts/rising_water.py` is deployed on GenLayer Studio Next at `0x16091331A1eC3761Fa6A850f9F71eAf53755a8BD`. Do not point Rising at a Studionet or Bradbury address.
 
-The deployed contract stores the participant and applies Rising Policy v1. Drought stage comes only from a scenario token in the submitted https URL (`normal`, `moderate`, `severe`, `emergency`, `conflict`, or `insufficient`). It does not fetch the page and it does not ask a model to multiply the entitlement. Validator consensus still applies to each write. A missing or conflicting token leaves the previous allocation unchanged.
+The contract stores the participant and applies Rising Policy v1. It fetches each https evidence page inside a GenLayer equivalence block. A fresh page must contain a `Rising-Evidence` record and a `Reservoir percent` line. The stage follows that percentage: above 70 is Normal, 40 through 70 is Moderate, 20 through below 40 is Severe, and below 20 is Emergency. A word in the URL is ignored. A page that cannot be fetched, or that has no Rising evidence record, leaves the previous allocation unchanged. Disagreeing fresh percentages leave it unchanged as well. The contract does not ask a model to multiply the entitlement. Validator consensus still applies to each write.
 
 The frontend must not invent that stage in Live Mode. It may show a local arithmetic check only after the contract returns a stage.

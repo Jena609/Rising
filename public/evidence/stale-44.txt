@@ -1,0 +1,7 @@
+Rising-Evidence
+Basin: green-valley
+Kind: reservoir
+Reservoir percent: 44
+Freshness: stale
+Observed: 2026-09-01
+This is a fictional testnet gauge page. It is not a government measurement.

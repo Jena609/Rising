@@ -2,6 +2,8 @@ import { assessEvidence } from "@/lib/evidence";
 import { BASIN_NAME } from "@/lib/policy";
 import type { EvidenceSource, Scenario } from "@/lib/types";
 
+export const EVIDENCE_ORIGIN = "https://rising-kira-68d0.vercel.app/evidence";
+
 const RETRIEVED_AT = "2026-10-07T11:30:00.000Z";
 const FRESH_AT = "2026-10-07T11:00:00.000Z";
 const STALE_AT = "2026-09-01T11:00:00.000Z";
@@ -12,6 +14,7 @@ function source(partial: EvidenceSource): EvidenceSource {
 
 function reservoir(
   id: string,
+  fileName: string,
   role: "primary" | "secondary",
   percent: number | null,
   observedAt: string | null,
@@ -21,7 +24,7 @@ function reservoir(
   return source({
     id,
     name: role === "primary" ? `${BASIN_NAME} reservoir gauge` : `${BASIN_NAME} reservoir mirror`,
-    url: `https://example.com/rising-demo/${id}`,
+    url: `${EVIDENCE_ORIGIN}/${fileName}`,
     valueLabel: percent === null ? "No reading" : `${percent}%`,
     valueNumber: percent,
     unit: "percent full",
@@ -34,11 +37,11 @@ function reservoir(
   });
 }
 
-function river(id: string, label: string): EvidenceSource {
+function river(id: string, fileName: string, label: string): EvidenceSource {
   return source({
     id,
     name: `${BASIN_NAME} river gauge`,
-    url: `https://example.com/rising-demo/${id}`,
+    url: `${EVIDENCE_ORIGIN}/${fileName}`,
     valueLabel: label,
     valueNumber: null,
     unit: "status",
@@ -58,10 +61,20 @@ function consistent(
   percent: number,
   riverFlowStatus: string,
 ): Scenario {
+  const pages: Record<string, [string, string, string]> = {
+    normal: ["r80-a.txt", "r80-b.txt", "flow-a.txt"],
+    moderate: ["r58-a.txt", "r58-b.txt", "flow-b.txt"],
+    severe: ["r30-a.txt", "r30-b.txt", "flow-c.txt"],
+    emergency: ["r15-a.txt", "r15-b.txt", "flow-d.txt"],
+  };
+  const file = pages[id];
+  if (!file) {
+    throw new Error(`Scenario ${id} has no evidence pages.`);
+  }
   const sources = [
-    reservoir(`${id}-primary`, "primary", percent, FRESH_AT, "available", "fresh"),
-    reservoir(`${id}-secondary`, "secondary", percent, FRESH_AT, "available", "fresh"),
-    river(`${id}-river`, riverFlowStatus),
+    reservoir(`${id}-primary`, file[0], "primary", percent, FRESH_AT, "available", "fresh"),
+    reservoir(`${id}-secondary`, file[1], "secondary", percent, FRESH_AT, "available", "fresh"),
+    river(`${id}-river`, file[2], riverFlowStatus),
   ];
   const assessment = assessEvidence(sources);
   if (assessment.status !== "consistent" || assessment.reservoirPercent !== percent) {
@@ -115,9 +128,9 @@ export const SCENARIOS: readonly Scenario[] = [
     riverFlowStatus: "Below normal",
     evidenceStatus: "conflict",
     sources: [
-      reservoir("conflict-primary", "primary", 58, FRESH_AT, "available", "fresh"),
-      reservoir("conflict-secondary", "secondary", 31, FRESH_AT, "available", "fresh"),
-      river("conflict-river", "Below normal"),
+      reservoir("conflict-primary", "r58-c.txt", "primary", 58, FRESH_AT, "available", "fresh"),
+      reservoir("conflict-secondary", "r30-c.txt", "secondary", 31, FRESH_AT, "available", "fresh"),
+      river("conflict-river", "flow-e.txt", "Below normal"),
     ],
   },
   {
@@ -128,12 +141,12 @@ export const SCENARIOS: readonly Scenario[] = [
     riverFlowStatus: "Unavailable",
     evidenceStatus: "insufficient",
     sources: [
-      reservoir("insufficient-primary", "primary", null, null, "missing", "missing"),
-      reservoir("insufficient-secondary", "secondary", 44, STALE_AT, "stale", "stale"),
+      reservoir("insufficient-primary", "missing-a.txt", "primary", null, null, "missing", "missing"),
+      reservoir("insufficient-secondary", "stale-44.txt", "secondary", 44, STALE_AT, "stale", "stale"),
       {
         id: "insufficient-river",
         name: `${BASIN_NAME} river gauge`,
-        url: "https://example.com/rising-demo/insufficient-river",
+        url: `${EVIDENCE_ORIGIN}/flow-f.txt`,
         valueLabel: "No reading",
         valueNumber: null,
         unit: "status",

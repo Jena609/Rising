@@ -2,13 +2,41 @@
 
 Transparent water allocation for a changing climate.
 
-Rising is a GenLayer testnet experiment. People can connect a wallet, open the official testnet faucet, register a fictional water entitlement, request a drought evaluation, inspect evidence, and challenge a result.
+Rising is a GenLayer Studio Next testnet experiment for a fictional drought-allocation policy. People can connect a wallet, register a fictional water entitlement, submit public evidence pages, and challenge a result.
 
-Green Valley Basin is fictional. A registration does not create a legal water right, a government decision, or a financial product. Test GEN pays testnet fees only.
+Green Valley Basin is fictional. A registration does not create a legal water right, a government decision, or a financial product. Test GEN pays testnet fees only. Rising does not verify government water data, and it does not manage real funds.
+
+The Intelligent Contract fetches each submitted https page and reads a `Reservoir percent` line from a `Rising-Evidence` record. The drought stage follows that percentage. A word in the URL is not evidence. If a page cannot be fetched, has no Rising evidence record, or disagrees with another fresh reading, the previous allocation stays in place.
+
+## Reviewer quick start
+
+1. Open https://rising-kira-68d0.vercel.app.
+2. Choose Enter Rising.
+3. Use Demo Mode with no wallet, or connect a wallet on Studio Next, chain ID `61997`.
+4. Register a fictional participant at `/register`.
+5. Open `/evaluation` and submit one of the evidence sets below.
+6. Open `/history` and `/challenge`. A challenge stores the fetched reading and does not change the allocation.
+7. Confirm the contract record in the Studio Next explorer. Demo Mode never shows a transaction hash.
+
+Example evidence pages:
+
+- Agreeing moderate gauges: https://rising-kira-68d0.vercel.app/evidence/r58-a.txt and https://rising-kira-68d0.vercel.app/evidence/r58-b.txt
+- Disagreeing gauges: https://rising-kira-68d0.vercel.app/evidence/r58-c.txt and https://rising-kira-68d0.vercel.app/evidence/r30-c.txt
+- A URL such as `https://example.com/evidence/severe-drought` has no Rising evidence record, so it does not become a severe stage.
+
+Studio Next test GEN comes from the account selector at https://studio-dev.genlayer.com. Rising has no separate faucet, and it does not hold a private key.
+
+## Known limitations
+
+- The basin, gauges, and entitlements are fictional.
+- The contract does not accept a page just because its URL contains a word such as `severe`.
+- It does not crawl arbitrary drought websites or ask a model to calculate the allocation.
+- A challenge does not change the current allocation.
+- The earlier contract at `0x16091331A1eC3761Fa6A850f9F71eAf53755a8BD` used the URL word. Those transactions remain on that address. They are not the current evidence model.
 
 ## Live
 
-Studio Next only. No real value.
+Studio Next only. No real value. The address below is the earlier URL-marker deployment. The replacement address is recorded here after its fetched-page transactions are confirmed.
 
 - Repo: [github.com/Jena609/Rising](https://github.com/Jena609/Rising)
 - Chain: Studio Next `61997`

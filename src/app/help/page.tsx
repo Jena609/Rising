@@ -80,8 +80,8 @@ export default function HelpPage() {
           <p className="mt-3 leading-7 text-ink">
             Reservoir percentage selects the drought stage. The stage selects a multiplier. Current allocation equals
             base entitlement times that multiplier. The multiplication is ordinary deterministic arithmetic. In Demo
-            Mode the stage comes from a labeled fictional scenario. In Live Mode the configured Intelligent Contract
-            must return the stage before Rising shows a final allocation.
+            Mode the stage comes from a labeled fictional scenario. In Live Mode the Intelligent Contract fetches each
+            evidence page and reads its reservoir percentage. A word in the URL does not select the stage.
           </p>
         </article>
         <article>

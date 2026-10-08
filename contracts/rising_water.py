@@ -4,9 +4,9 @@
 Rising Policy v1 for the fictional Green Valley Basin.
 
 This contract stores a testnet participant and applies the published multipliers.
-It does not create a legal water right. Drought stage is derived only from the
-scenario token in the submitted Rising demo evidence URLs. It does not fetch a
-government gauge and it does not ask a model to multiply the entitlement.
+It does not create a legal water right. A drought stage comes from the reservoir
+percentage printed on the fetched evidence page. A word in the URL is ignored.
+The contract does not ask a model to multiply the entitlement.
 """
 
 import genlayer as gl
@@ -33,12 +33,63 @@ def _allocation(base: int, stage: str, participant_type: str) -> int:
     return (product + 5000) // 10000
 
 
-def _scenario_token(url: str) -> str:
-    lowered = url.lower()
-    for token in ("insufficient", "conflict", "emergency", "severe", "moderate", "normal"):
-        if token in lowered:
-            return token
+def _stage_from_reservoir(percent: int) -> str:
+    if percent > 70:
+        return "NORMAL"
+    if percent >= 40:
+        return "MODERATE"
+    if percent >= 20:
+        return "SEVERE"
+    return "EMERGENCY"
+
+
+def _line_value(text: str, label: str) -> str:
+    prefix = label.lower() + ":"
+    for line in text.splitlines():
+        cleaned = line.strip()
+        if cleaned.lower().startswith(prefix):
+            return cleaned.split(":", 1)[1].strip()
     return ""
+
+
+def _parse_page(url: str, text: str) -> dict:
+    if "rising-evidence" not in text.lower():
+        return {"url": url, "status": "unreadable", "reservoir_percent": None, "drought_stage": ""}
+    freshness = _line_value(text, "Freshness").lower()
+    raw_percent = _line_value(text, "Reservoir percent")
+    if raw_percent == "":
+        return {"url": url, "status": "no-reading", "reservoir_percent": None, "drought_stage": ""}
+    if not raw_percent.isdigit():
+        return {"url": url, "status": "unreadable", "reservoir_percent": None, "drought_stage": ""}
+    percent = int(raw_percent)
+    if percent > 100:
+        return {"url": url, "status": "unreadable", "reservoir_percent": None, "drought_stage": ""}
+    if freshness in ("stale", "missing"):
+        return {"url": url, "status": freshness, "reservoir_percent": percent, "drought_stage": ""}
+    return {
+        "url": url,
+        "status": "fresh",
+        "reservoir_percent": percent,
+        "drought_stage": _stage_from_reservoir(percent),
+    }
+
+
+def _fetch_readings(urls: list) -> list:
+    def read_all() -> str:
+        results = []
+        for url in urls:
+            try:
+                text = gl.nondet.web.render(url, mode="text")
+            except Exception:
+                results.append({"url": url, "status": "unread", "reservoir_percent": None, "drought_stage": ""})
+                continue
+            if not isinstance(text, str) or text.strip() == "":
+                results.append({"url": url, "status": "unread", "reservoir_percent": None, "drought_stage": ""})
+                continue
+            results.append(_parse_page(url, text))
+        return json.dumps(results, sort_keys=True)
+
+    return json.loads(gl.eq_principle.strict_eq(read_all))
 
 
 def _wallet_key(value) -> str:
@@ -103,38 +154,33 @@ class RisingWater(gl.contract.Contract):
         participant = json.loads(participant_raw)
         if not isinstance(evidence_urls, list) or len(evidence_urls) == 0:
             raise gl.vm.UserError("At least one evidence URL is required")
+        if len(evidence_urls) > 6:
+            raise gl.vm.UserError("Submit no more than six evidence URLs")
 
-        tokens = []
         for url in evidence_urls:
             if not isinstance(url, str) or not url.startswith("https://"):
                 raise gl.vm.UserError("Each evidence URL must start with https://")
-            token = _scenario_token(url)
-            if token:
-                tokens.append(token)
 
+        readings = _fetch_readings(evidence_urls)
+        fresh = [item for item in readings if item["status"] == "fresh"]
+        blocked = [item for item in readings if item["status"] in ("unread", "unreadable")]
+        percents = sorted({item["reservoir_percent"] for item in fresh})
         previous_raw = self.allocations.get(wallet)
         previous_allocation = json.loads(previous_raw)["allocation"] if previous_raw else None
-        distinct = sorted(set(tokens))
         status = "Inconclusive"
         stage = ""
         reservoir = None
         allocation = previous_allocation
         applied = False
 
-        if len(distinct) == 0 or "insufficient" in distinct:
+        if blocked or len(fresh) == 0:
             message = "Insufficient current evidence. The previous allocation remains active."
-        elif "conflict" in distinct or len(distinct) > 1:
+        elif len(percents) > 1:
             status = "Disputed"
             message = "Evidence sources conflict. Existing allocations remain active until review is complete."
         else:
-            token = distinct[0]
-            stage = {
-                "normal": "NORMAL",
-                "moderate": "MODERATE",
-                "severe": "SEVERE",
-                "emergency": "EMERGENCY",
-            }[token]
-            reservoir = {"normal": 80, "moderate": 58, "severe": 30, "emergency": 15}[token]
+            reservoir = int(percents[0])
+            stage = _stage_from_reservoir(reservoir)
             allocation = _allocation(
                 int(participant["base_entitlement"]),
                 stage,
@@ -142,7 +188,7 @@ class RisingWater(gl.contract.Contract):
             )
             applied = True
             status = "Finalized"
-            message = "Allocation calculated from the contract drought stage and Rising Policy v1."
+            message = "Allocation calculated from the reservoir percentage fetched from the evidence pages and Rising Policy v1."
 
         self.evaluation_count = int(self.evaluation_count) + 1
         evaluation_id = f"eval-{int(self.evaluation_count)}"
@@ -156,6 +202,7 @@ class RisingWater(gl.contract.Contract):
             "allocation": allocation,
             "previous_allocation": previous_allocation,
             "evidence_urls": evidence_urls,
+            "evidence_readings": readings,
             "policy_version": self.policy_version,
             "applied": applied,
             "message": message,
@@ -203,10 +250,12 @@ class RisingWater(gl.contract.Contract):
             raise gl.vm.UserError("Describe the challenge")
         wallet = _wallet_key(gl.message.sender_address)
         challenge_id = f"chg-{evaluation_id}-{wallet[-6:]}"
+        readings = _fetch_readings([alternative_evidence_url])
         self.challenges[challenge_id] = json.dumps(
             {
                 "evaluation_id": evaluation_id,
                 "alternative_evidence_url": alternative_evidence_url,
+                "evidence_readings": readings,
                 "reason": reason.strip(),
                 "wallet_address": wallet,
                 "status": "Submitted",

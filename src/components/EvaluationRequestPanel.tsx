@@ -44,7 +44,7 @@ export function EvaluationRequestPanel() {
       <form id="action-form" onSubmit={onSubmit} className="space-y-4" noValidate>
         {risingConfig.liveReady ? (
           <p className="text-sm text-navy">
-            Live Mode sends the URLs below to the configured contract. It does not treat the fictional scenario readings as the basin result.
+            Live Mode sends the URLs below to the configured contract. The contract fetches each page. A word in the URL is not a drought stage.
           </p>
         ) : (
           <div className="space-y-3">
@@ -59,7 +59,7 @@ export function EvaluationRequestPanel() {
         )}
         <p className="text-sm text-muted">
           {risingConfig.liveReady
-            ? "These URLs are submitted as evidence references. The contract must return the drought stage before a final allocation is shown."
+            ? "The contract reads the reservoir percentage on each fetched page. It must return that stage before a final allocation is shown."
             : `${DEMO_DATA_LABEL} Demo Mode does not retrieve these URLs. The preview uses the selected fictional scenario.`}
         </p>
         <div>

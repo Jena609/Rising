@@ -47,7 +47,7 @@ export function ChallengeForm() {
         </div>
         <div>
           <label className={labelClass} htmlFor="alt-url">Alternative evidence URL</label>
-          <input id="alt-url" className={fieldClass} value={form.alternativeEvidenceUrl} placeholder="https://example.com/rising-demo/newer-reading" onChange={(event) => setForm({ ...form, alternativeEvidenceUrl: event.target.value })} />
+          <input id="alt-url" className={fieldClass} value={form.alternativeEvidenceUrl} placeholder="https://rising-kira-68d0.vercel.app/evidence/r58-a.txt" onChange={(event) => setForm({ ...form, alternativeEvidenceUrl: event.target.value })} />
           {errors.alternativeEvidenceUrl ? <p className="mt-1 text-sm text-rose-800">{errors.alternativeEvidenceUrl}</p> : null}
         </div>
         <div>
