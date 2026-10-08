@@ -9,9 +9,12 @@ percentage printed on the fetched evidence page. A word in the URL is ignored.
 The contract does not ask a model to multiply the entitlement.
 """
 
+import datetime
 import genlayer as gl
 from genlayer.types import *
 import json
+
+FRESH_WINDOW_SECONDS = 48 * 60 * 60
 
 
 def _multiplier(stage: str, participant_type: str) -> int:
@@ -52,41 +55,63 @@ def _line_value(text: str, label: str) -> str:
     return ""
 
 
-def _parse_page(url: str, text: str) -> dict:
+def _reading_status(freshness: str, observed: str, now: datetime.datetime) -> str:
+    if freshness in ("stale", "missing"):
+        return freshness
+    if freshness != "fresh":
+        return "invalid"
+    parts = observed.split("-")
+    if len(parts) != 3 or any(not part.isdigit() for part in parts):
+        return "invalid"
+    year, month, day = int(parts[0]), int(parts[1]), int(parts[2])
+    try:
+        stamp = datetime.datetime(year, month, day, tzinfo=datetime.timezone.utc)
+    except ValueError:
+        return "invalid"
+    if stamp > now:
+        return "invalid"
+    if (now - stamp).total_seconds() > FRESH_WINDOW_SECONDS:
+        return "stale"
+    return "fresh"
+
+
+def _parse_page(url: str, text: str, now: datetime.datetime) -> dict:
     if "rising-evidence" not in text.lower():
-        return {"url": url, "status": "unreadable", "reservoir_percent": None, "drought_stage": ""}
-    freshness = _line_value(text, "Freshness").lower()
+        return {"url": url, "status": "unreadable", "reservoir_percent": None, "drought_stage": "", "observed": ""}
     raw_percent = _line_value(text, "Reservoir percent")
     if raw_percent == "":
-        return {"url": url, "status": "no-reading", "reservoir_percent": None, "drought_stage": ""}
+        return {"url": url, "status": "no-reading", "reservoir_percent": None, "drought_stage": "", "observed": ""}
     if not raw_percent.isdigit():
-        return {"url": url, "status": "unreadable", "reservoir_percent": None, "drought_stage": ""}
+        return {"url": url, "status": "unreadable", "reservoir_percent": None, "drought_stage": "", "observed": ""}
     percent = int(raw_percent)
     if percent > 100:
-        return {"url": url, "status": "unreadable", "reservoir_percent": None, "drought_stage": ""}
-    if freshness in ("stale", "missing"):
-        return {"url": url, "status": freshness, "reservoir_percent": percent, "drought_stage": ""}
+        return {"url": url, "status": "unreadable", "reservoir_percent": None, "drought_stage": "", "observed": ""}
+    observed = _line_value(text, "Observed")
+    status = _reading_status(_line_value(text, "Freshness").lower(), observed, now)
+    stage = _stage_from_reservoir(percent) if status == "fresh" else ""
     return {
         "url": url,
-        "status": "fresh",
+        "status": status,
         "reservoir_percent": percent,
-        "drought_stage": _stage_from_reservoir(percent),
+        "drought_stage": stage,
+        "observed": observed,
     }
 
 
 def _fetch_readings(urls: list) -> list:
     def read_all() -> str:
+        now = datetime.datetime.now(datetime.timezone.utc)
         results = []
         for url in urls:
             try:
                 text = gl.nondet.web.render(url, mode="text")
             except Exception:
-                results.append({"url": url, "status": "unread", "reservoir_percent": None, "drought_stage": ""})
+                results.append({"url": url, "status": "unread", "reservoir_percent": None, "drought_stage": "", "observed": ""})
                 continue
             if not isinstance(text, str) or text.strip() == "":
-                results.append({"url": url, "status": "unread", "reservoir_percent": None, "drought_stage": ""})
+                results.append({"url": url, "status": "unread", "reservoir_percent": None, "drought_stage": "", "observed": ""})
                 continue
-            results.append(_parse_page(url, text))
+            results.append(_parse_page(url, text, now))
         return json.dumps(results, sort_keys=True)
 
     return json.loads(gl.eq_principle.strict_eq(read_all))
@@ -163,7 +188,7 @@ class RisingWater(gl.contract.Contract):
 
         readings = _fetch_readings(evidence_urls)
         fresh = [item for item in readings if item["status"] == "fresh"]
-        blocked = [item for item in readings if item["status"] in ("unread", "unreadable")]
+        blocked = [item for item in readings if item["status"] in ("unread", "unreadable", "invalid")]
         percents = sorted({item["reservoir_percent"] for item in fresh})
         previous_raw = self.allocations.get(wallet)
         previous_allocation = json.loads(previous_raw)["allocation"] if previous_raw else None

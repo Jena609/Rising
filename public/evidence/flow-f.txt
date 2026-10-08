@@ -3,5 +3,5 @@ Basin: green-valley
 Kind: river
 River flow: Unavailable
 Freshness: fresh
-Observed: 2026-10-07
+Observed: 2026-10-08
 This is a fictional testnet gauge page. It is not a government measurement.

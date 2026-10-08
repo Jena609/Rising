@@ -6,7 +6,13 @@ Rising is a GenLayer Studio Next testnet experiment for a fictional drought-allo
 
 Green Valley Basin is fictional. A registration does not create a legal water right, a government decision, or a financial product. Test GEN pays testnet fees only. Rising does not verify government water data, and it does not manage real funds.
 
-The Intelligent Contract fetches each submitted https page and reads a `Reservoir percent` line from a `Rising-Evidence` record. The drought stage follows that percentage. A word in the URL is not evidence. If a page cannot be fetched, has no Rising evidence record, or disagrees with another fresh reading, the previous allocation stays in place.
+The Intelligent Contract fetches each submitted https page and reads a `Reservoir percent` line from a `Rising-Evidence` record. The drought stage follows that percentage. A word in the URL is not evidence. A page is usable only when it says `Freshness: fresh` and its `Observed` date is within 48 hours of the validator clock, and not in the future. The freshness label cannot keep an old date. If a page cannot be fetched, has no Rising evidence record, is too old, or disagrees with another fresh reading, the previous allocation stays in place.
+
+The evidence pages are a controlled fictional schema published with this project. They are not an independent or government gauge. A challenge stores the alternative page and a reason. It does not replace the allocation.
+
+## Portal description
+
+Rising is a GenLayer Studio Next testnet prototype for transparent drought-based water allocation. Users register a fictional water entitlement, submit HTTPS evidence pages, and request an allocation evaluation. The Intelligent Contract fetches and parses structured evidence pages through GenLayer’s nondeterministic web access, reaches an equivalent result across validators, detects conflicting or unusable evidence, and applies a transparent allocation policy. Rising uses a fictional basin and fictional gauge pages. It does not create legal water rights, verify government measurements, custody funds, or manage real-world water resources.
 
 ## Reviewer quick start
 
@@ -28,15 +34,17 @@ Studio Next test GEN comes from the account selector at https://studio-dev.genla
 
 ## Known limitations
 
-- The basin, gauges, and entitlements are fictional.
+- The basin, gauges, and entitlements are fictional. This project publishes the evidence pages, and those pages can be edited in the repository.
+- The evidence format is a controlled `Rising-Evidence` schema, not a government data standard.
 - The contract does not accept a page just because its URL contains a word such as `severe`.
-- It does not crawl arbitrary drought websites or ask a model to calculate the allocation.
-- A challenge does not change the current allocation.
+- It does not crawl arbitrary drought websites or ask a model to interpret a page. The allocation is deterministic arithmetic.
+- `Freshness: fresh` is not enough. The `Observed` date must fall inside 48 hours and must not be in the future.
+- A challenge is a stored review record. It does not recalculate or reverse the allocation.
 - The earlier contract at `0x16091331A1eC3761Fa6A850f9F71eAf53755a8BD` used the URL word. Those transactions remain on that address. They are not the current evidence model.
 
 ## Live
 
-Studio Next only. No real value.
+Studio Next only. No real value. The address below checks the freshness label and does not yet enforce the 48-hour observation window. That window is in the current source. Its contract address is recorded here after the on-chain check is confirmed.
 
 - App: https://rising-kira-68d0.vercel.app
 - Repo: [github.com/Jena609/Rising](https://github.com/Jena609/Rising)

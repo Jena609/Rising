@@ -1,7 +1,8 @@
 Rising-Evidence
 Basin: green-valley
 Kind: reservoir
-Reservoir percent: 80
+Reservoir percent: 58
 Freshness: fresh
-Observed: 2026-10-08
+Observed: 2020-01-01
 This is a fictional testnet gauge page. It is not a government measurement.
+The freshness label says fresh, but the observation date is outside the 48-hour window.
