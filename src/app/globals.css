@@ -1,0 +1,434 @@
+@import "tailwindcss";
+
+@theme {
+  --color-navy: #0c2340;
+  --color-navy-deep: #08182c;
+  --color-water: #0e6f9c;
+  --color-water-dark: #0b587c;
+  --color-foam: #e7f3f8;
+  --color-paper: #f4f7f8;
+  --color-ink: #142033;
+  --color-muted: #4d5d6d;
+  --color-line: #d5e0ea;
+  --font-sans: "Segoe UI", "Helvetica Neue", sans-serif;
+  --font-serif: "Iowan Old Style", Palatino, Georgia, serif;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}
+
+/* Next.js injects its development issue counter into this host. Keep those errors in the console. */
+nextjs-portal {
+  display: none !important;
+}
+
+.skip-link {
+  position: absolute;
+  left: 1rem;
+  top: -4rem;
+  z-index: 50;
+  border-radius: 999px;
+  background: white;
+  padding: 0.5rem 1rem;
+  color: var(--color-navy);
+}
+
+.skip-link:focus {
+  top: 1rem;
+}
+
+:focus-visible {
+  outline: 3px solid #0e6f9c;
+  outline-offset: 2px;
+}
+
+.landing-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  color: white;
+  background: #061525;
+}
+
+.landing-gate.is-leaving {
+  animation: landing-exit 0.9s ease forwards;
+}
+
+.landing-sky,
+.landing-glow,
+.landing-water {
+  position: absolute;
+  inset: 0;
+}
+
+.landing-sky {
+  background:
+    radial-gradient(ellipse at 50% 18%, rgba(120, 196, 224, 0.18), transparent 42%),
+    linear-gradient(180deg, #061525 0%, #0c2340 42%, #0d5f8c 78%, #127aab 100%);
+}
+
+.landing-glow {
+  background: radial-gradient(ellipse at 50% 100%, rgba(215, 243, 251, 0.28), transparent 46%);
+  animation: water-in 1.8s ease both;
+}
+
+.landing-water {
+  animation: water-in 2.2s ease both;
+}
+
+.landing-wave {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  overflow: hidden;
+}
+
+.wave-back {
+  bottom: -8%;
+  height: min(42vh, 22rem);
+}
+
+.wave-mid {
+  bottom: -12%;
+  height: min(34vh, 18rem);
+}
+
+.wave-front {
+  bottom: -16%;
+  height: min(26vh, 14rem);
+}
+
+.wave-track {
+  display: flex;
+  width: 200%;
+  height: 100%;
+  animation: wave-drift linear infinite;
+}
+
+.wave-track svg {
+  display: block;
+  width: 50%;
+  height: 100%;
+}
+
+.landing-spark {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(232, 248, 252, 0.85);
+  box-shadow: 0 0 12px rgba(186, 230, 245, 0.8);
+  animation: spark-float 9s ease-in-out infinite;
+}
+
+.landing-copy {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  width: min(44rem, calc(100% - 2.5rem));
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.landing-kicker {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0;
+}
+
+.landing-kicker span:last-child {
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 999px;
+  padding: 0.2rem 0.65rem;
+  color: rgba(232, 248, 252, 0.86);
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.landing-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-family: var(--font-serif);
+  font-size: 1.15rem;
+}
+
+.landing-title {
+  margin: 1.25rem 0 0;
+  font-family: var(--font-serif);
+  font-size: clamp(3.4rem, 9vw, 6.5rem);
+  font-weight: 500;
+  letter-spacing: -0.04em;
+  line-height: 0.95;
+}
+
+.landing-headline {
+  max-width: 38rem;
+  margin: 1.1rem 0 0;
+  color: rgba(244, 251, 253, 0.94);
+  font-size: clamp(1.15rem, 2.5vw, 1.7rem);
+  line-height: 1.45;
+}
+
+.landing-description {
+  max-width: 34rem;
+  margin: 0.9rem 0 0;
+  color: rgba(214, 234, 242, 0.82);
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.enter-rising {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  margin-top: 1.75rem;
+  min-height: 3.25rem;
+  min-width: min(100%, 16rem);
+  border: 0;
+  border-radius: 999px;
+  background: white;
+  color: #0c2340;
+  padding: 0.8rem 1.8rem;
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 10px 30px rgba(6, 21, 37, 0.28);
+  transition: transform 0.35s ease, box-shadow 0.35s ease;
+}
+
+.enter-rising::after {
+  content: "";
+  position: absolute;
+  inset: -40%;
+  z-index: -1;
+  background: radial-gradient(circle, rgba(159, 212, 234, 0.7), transparent 58%);
+  opacity: 0;
+  transform: scale(0.6);
+  transition: opacity 0.45s ease, transform 0.6s ease;
+}
+
+.enter-rising:hover,
+.enter-rising:focus-visible {
+  transform: translateY(-2px);
+  box-shadow: 0 0 28px rgba(186, 230, 245, 0.62), 0 16px 34px rgba(6, 21, 37, 0.3);
+}
+
+.enter-rising:hover::after,
+.enter-rising:focus-visible::after {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.enter-rising:disabled {
+  cursor: default;
+}
+
+.landing-points {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.45rem 1.1rem;
+  max-width: 40rem;
+  margin: 1.6rem 0 0;
+  padding: 0;
+  list-style: none;
+  color: rgba(232, 248, 252, 0.78);
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.rise-in {
+  animation: rise-in 0.9s ease both;
+}
+
+.app-held {
+  visibility: hidden;
+  opacity: 0;
+}
+
+.app-reveal {
+  animation: app-in 0.9s ease forwards;
+}
+
+@keyframes wave-drift {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes water-in {
+  from {
+    opacity: 0;
+    transform: translateY(28px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes spark-float {
+  0%,
+  100% {
+    opacity: 0.2;
+    transform: translateY(0);
+  }
+  50% {
+    opacity: 0.9;
+    transform: translateY(-14px);
+  }
+}
+
+@keyframes landing-exit {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+
+@keyframes app-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (max-width: 640px) {
+  .landing-copy {
+    width: min(100% - 2rem, 40rem);
+  }
+
+  .landing-points {
+    display: grid;
+    gap: 0.35rem;
+  }
+
+  .wave-back { bottom: 0; height: 7.5rem; }
+  .wave-mid { bottom: 0; height: 6rem; }
+  .wave-front { bottom: 0; height: 4.75rem; }
+}
+
+.basin-reservoir {
+  position: relative;
+  height: 13rem;
+  overflow: hidden;
+  border-radius: 1.5rem;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.55), transparent 28%),
+    linear-gradient(180deg, #d5eef8 0%, #7eb6d2 46%, #0e6f9c 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+.basin-shine {
+  position: absolute;
+  top: 16%;
+  left: 10%;
+  z-index: 2;
+  width: 46%;
+  height: 14%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+  pointer-events: none;
+}
+
+.basin-wave {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  overflow: hidden;
+}
+
+.basin-wave-back {
+  bottom: 18%;
+  height: 46%;
+}
+
+.basin-wave-mid {
+  bottom: 6%;
+  height: 42%;
+}
+
+.basin-wave-front {
+  bottom: -8%;
+  height: 40%;
+}
+
+.basin-wave-track {
+  display: flex;
+  width: 200%;
+  height: 100%;
+  animation: wave-drift linear infinite;
+}
+
+.basin-wave-track svg {
+  display: block;
+  width: 50%;
+  height: 100%;
+}
+
+@media (max-width: 640px) {
+  .basin-reservoir {
+    height: 8.75rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .spinner,
+  .wave-track,
+  .basin-wave-track,
+  .landing-spark,
+  .landing-glow,
+  .landing-water,
+  .rise-in,
+  .landing-gate.is-leaving,
+  .app-reveal {
+    animation: none;
+  }
+
+  .rise-in,
+  .landing-glow,
+  .landing-water,
+  .app-reveal {
+    opacity: 1;
+    transform: none;
+  }
+}
