@@ -5,6 +5,7 @@ import { StageBadge, StatusBadge } from "@/components/StatusBadge";
 import { cardClass } from "@/components/styles";
 import { useRising } from "@/components/RisingProvider";
 import { formatDateTime } from "@/lib/format";
+import { allocationOutcomeCopy, evidenceReadingLines } from "@/lib/live-evaluation";
 import { EmptyState } from "@/components/EmptyState";
 
 export function EvaluationStatus() {
@@ -47,7 +48,7 @@ export function EvaluationStatus() {
                 ? "Evidence insufficient"
                 : evaluation.mode === "demo"
                   ? "No conflict in the fictional preview"
-                  : "Not reported by the contract"}
+                  : "Sources agree"}
           </dd>
         </div>
         <div>
@@ -64,6 +65,17 @@ export function EvaluationStatus() {
         </div>
       </dl>
       <p className="mt-3 text-sm leading-6">{evaluation.message}</p>
+      {evaluation.mode === "live" ? <p className="mt-2 text-sm leading-6">{allocationOutcomeCopy(evaluation)}</p> : null}
+      {evidenceReadingLines(evaluation.evidenceReadings).length > 0 ? (
+        <div className="mt-3 text-sm">
+          <p className="text-muted">Evidence readings</p>
+          <ul className="mt-1 space-y-1 break-all">
+            {evidenceReadingLines(evaluation.evidenceReadings).map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
       <div className="mt-3">
         <ExplorerLink hash={evaluation.transactionHash} />
       </div>

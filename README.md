@@ -51,15 +51,15 @@ Studio Next only. No real value. Submit this deployment. Do not submit `https://
 - Chain: Studio Next `61997`
 - RPC: `https://studio-dev.genlayer.com/api`
 - Explorer: [explorer-studio-dev.genlayer.com](https://explorer-studio-dev.genlayer.com/)
-- Current contract: [`0x55FF3ea094d4EbB0Edbbf105ab1D1e9c1f7150a1`](https://explorer-studio-dev.genlayer.com/address/0x55FF3ea094d4EbB0Edbbf105ab1D1e9c1f7150a1)
-- Deploy tx: [`0xe2db45e8fd1c9266e15556cbb91e4724f0f904f92568cd3f74e4d6db8724bd20`](https://explorer-studio-dev.genlayer.com/tx/0xe2db45e8fd1c9266e15556cbb91e4724f0f904f92568cd3f74e4d6db8724bd20)
-- Source file SHA-256 (`contracts/rising_water.py`): `b1c7c9f94865e51bec45887a86e30d8adf30ece38fec1ba852556e6031c6fe05`
+- Current contract: [`0xD1d2A9A138bd01efaF8b44826C94095a7Ce94fb3`](https://explorer-studio-dev.genlayer.com/address/0xD1d2A9A138bd01efaF8b44826C94095a7Ce94fb3)
+- Deploy tx: [`0x9eeeee43ccfd5b0f7622290191d4b29b9c4c1ff666d2440c0fc528ef6cfabd10`](https://explorer-studio-dev.genlayer.com/tx/0x9eeeee43ccfd5b0f7622290191d4b29b9c4c1ff666d2440c0fc528ef6cfabd10)
+- Source file SHA-256 (`contracts/rising_water.py`): `f1837fc43d6518bebdf9f0c1bc00002e492ec818e3cfa9ee988afa33b1718924`
 - Runner pin: `py-genlayer:5jycge4q8k23462jtb0b9fyey1s9qz928sz2nbrd9mg4sxqg2qng`
 
 Public configuration for this deployment:
 
 ```bash
-NEXT_PUBLIC_GENLAYER_CONTRACT_ADDRESS=0x55FF3ea094d4EbB0Edbbf105ab1D1e9c1f7150a1
+NEXT_PUBLIC_GENLAYER_CONTRACT_ADDRESS=0xD1d2A9A138bd01efaF8b44826C94095a7Ce94fb3
 NEXT_PUBLIC_GENLAYER_RPC_URL=https://studio-dev.genlayer.com/api
 NEXT_PUBLIC_GENLAYER_CHAIN_ID=61997
 NEXT_PUBLIC_GENLAYER_EXPLORER_URL=https://explorer-studio-dev.genlayer.com
@@ -67,14 +67,11 @@ NEXT_PUBLIC_GENLAYER_EXPLORER_TX_URL_TEMPLATE=https://explorer-studio-dev.genlay
 NEXT_PUBLIC_GENLAYER_INTEGRATION_ENABLED=true
 ```
 
-The account `0x5F85c75F8442b92ba66C30371CEf6cF3D7B4c650` is registered as North Orchard, a farm in Green Valley, with a base entitlement of 1,000. The current allocation is eval-1: Moderate drought, reservoir 58%, 800 water units, Rising Policy v1. Those pages were observed on 2026-10-08. A page that says `Freshness: fresh` but was observed on 2020-01-01 was stored as stale, and the allocation stayed 800.
+This contract stores `latest_evaluation_by_wallet` when it creates an evaluation id. `get_latest_evaluation_id` returns that id. The site reads that evaluation after the transaction is finalized. A disputed or inconclusive record keeps the previous allocation and is not shown as applied.
 
-| Record | Result | Transaction |
-| --- | --- | --- |
-| Deploy | 48-hour observation window | [`0xe2db45e8fd1c9266e15556cbb91e4724f0f904f92568cd3f74e4d6db8724bd20`](https://explorer-studio-dev.genlayer.com/tx/0xe2db45e8fd1c9266e15556cbb91e4724f0f904f92568cd3f74e4d6db8724bd20) |
-| Registration | North Orchard, farm, base 1,000 | [`0x5900d88da5ef84e11bf9107a6b831f67ea661b1ac94c81ef9de9ca3dfba84349`](https://explorer-studio-dev.genlayer.com/tx/0x5900d88da5ef84e11bf9107a6b831f67ea661b1ac94c81ef9de9ca3dfba84349) |
-| eval-1 | Observed 2026-10-08, reservoir 58%. Moderate, allocation 800 | [`0x8d6eae7e5f2c4b6954a2a26ed1d26e658cb431d68b089cb4906354826a1892be`](https://explorer-studio-dev.genlayer.com/tx/0x8d6eae7e5f2c4b6954a2a26ed1d26e658cb431d68b089cb4906354826a1892be) |
-| eval-2 | Label says fresh. Observed 2020-01-01. Allocation stayed 800 | [`0x1ab37b9416351af2a823cd53790bc677c6be8c8fe375fbe89d080399ea76da17`](https://explorer-studio-dev.genlayer.com/tx/0x1ab37b9416351af2a823cd53790bc677c6be8c8fe375fbe89d080399ea76da17) |
+## Previous 48-hour contract
+
+`0x55FF3ea094d4EbB0Edbbf105ab1D1e9c1f7150a1` enforced the observation date, but it did not store the caller's latest evaluation id. It is not the current contract. Its deploy transaction is [`0xe2db45e8fd1c9266e15556cbb91e4724f0f904f92568cd3f74e4d6db8724bd20`](https://explorer-studio-dev.genlayer.com/tx/0xe2db45e8fd1c9266e15556cbb91e4724f0f904f92568cd3f74e4d6db8724bd20). On that contract, North Orchard's eval-1 was Moderate, reservoir 58%, allocation 800 ([`0x8d6eae7e`](https://explorer-studio-dev.genlayer.com/tx/0x8d6eae7e5f2c4b6954a2a26ed1d26e658cb431d68b089cb4906354826a1892be)). A page observed on 2020-01-01 stayed inactive ([`0x1ab37b94`](https://explorer-studio-dev.genlayer.com/tx/0x1ab37b9416351af2a823cd53790bc677c6be8c8fe375fbe89d080399ea76da17)).
 
 ## Previous fetched-page contract
 
@@ -195,7 +192,7 @@ NEXT_PUBLIC_GENLAYER_ABI
 NEXT_PUBLIC_GENLAYER_INTEGRATION_ENABLED
 ```
 
-You can also put the ABI array in `src/config/contract-abi.json`. The file ships as `[]`.
+You can also put the ABI array in `src/config/contract-abi.json`. The bundled file lists the Rising methods, including `get_evaluation` and `get_latest_evaluation_id`.
 
 `NEXT_PUBLIC_GENLAYER_INTEGRATION_ENABLED=true` turns on `genlayer-js` 1.1.8 for reads, writes, schema checks, and transaction status. Rising still calls a method only when that method is in the ABI or in the schema returned by the configured contract.
 
@@ -208,9 +205,10 @@ Supported method names, when the configured interface actually contains them:
 - `request_drought_evaluation`
 - `get_current_allocation`
 - `get_evaluation`
+- `get_latest_evaluation_id`
 - `challenge_evaluation`
 
-See `contracts/INTERFACE.md`. The Studio Next contract is [`0x55FF3ea094d4EbB0Edbbf105ab1D1e9c1f7150a1`](https://explorer-studio-dev.genlayer.com/address/0x55FF3ea094d4EbB0Edbbf105ab1D1e9c1f7150a1). The old Studionet deployment is not used.
+See `contracts/INTERFACE.md`. The Studio Next contract is [`0xD1d2A9A138bd01efaF8b44826C94095a7Ce94fb3`](https://explorer-studio-dev.genlayer.com/address/0xD1d2A9A138bd01efaF8b44826C94095a7Ce94fb3). The old Studionet deployment is not used.
 
 ## Switch from Demo Mode to Live Mode
 
@@ -274,7 +272,7 @@ The network is fixed to GenLayer Studio Next. The configured contract is:
 - Native currency: `GEN`
 - Explorer URL: `https://explorer-studio-dev.genlayer.com`
 - Faucet URL: not published. Use the faucet inside https://studio-dev.genlayer.com
-- Contract address: `0x55FF3ea094d4EbB0Edbbf105ab1D1e9c1f7150a1`
+- Contract address: `0xD1d2A9A138bd01efaF8b44826C94095a7Ce94fb3`
 - Deployment mode with that address configured: `live`
 
 ## Current network
@@ -288,10 +286,10 @@ This version uses GenLayer Studio Next only. Values are the official ones publis
 - Explorer: `https://explorer-studio-dev.genlayer.com`
 - Studio web app: `https://studio-dev.genlayer.com`
 - Faucet: built into the Studio account selector. No separate faucet URL is published.
-- Contract address: `0x55FF3ea094d4EbB0Edbbf105ab1D1e9c1f7150a1`
+- Contract address: `0xD1d2A9A138bd01efaF8b44826C94095a7Ce94fb3`
 
 Chain ID 4221 is Bradbury, 61999 is Studionet, and 61127 is Localnet. A wallet on those chains is told to switch to 61997. With `NEXT_PUBLIC_GENLAYER_CONTRACT_ADDRESS` set to the Studio Next contract above, deployment mode is live. A blank address stays in Demo Mode and the app shows: "Rising is connected to GenLayer Studio Next, but the Rising Intelligent Contract has not been configured."
 
-A transaction on this deployment is `https://explorer-studio-dev.genlayer.com/tx/{hash}`. The contract page is `https://explorer-studio-dev.genlayer.com/address/0x55FF3ea094d4EbB0Edbbf105ab1D1e9c1f7150a1`. Rising uses that path only when the transaction template is set to the Studio Next explorer. It does not invent a path on any other host.
+A transaction on this deployment is `https://explorer-studio-dev.genlayer.com/tx/{hash}`. The contract page is `https://explorer-studio-dev.genlayer.com/address/0xD1d2A9A138bd01efaF8b44826C94095a7Ce94fb3`. Rising uses that path only when the transaction template is set to the Studio Next explorer. It does not invent a path on any other host.
 
 Installed `genlayer-js` 1.1.8 has no `studioDevnet` chain. Rising builds a client chain with ID 61997, `isStudio: true`, and the canonical RPC. The on-chain deploy and writes were sent with GenLayer CLI 0.40.0-rc.3. The website client does not copy a consensus contract into that chain.

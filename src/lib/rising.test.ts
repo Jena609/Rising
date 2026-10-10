@@ -1,6 +1,15 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { decideAllocation } from "@/lib/allocation";
 import { resolveConfig } from "@/lib/config";
+import {
+  allocationOutcomeCopy,
+  readConfirmedEvaluation,
+  resolveLiveEvaluation,
+  type ResolveLiveEvaluationInput,
+} from "@/lib/live-evaluation";
+import type { StoredAllocation } from "@/lib/types";
 import { assessEvidence } from "@/lib/evidence";
 import { calculateAllocation, stageFromReservoir } from "@/lib/policy";
 import { getScenario } from "@/lib/scenarios";
@@ -247,6 +256,160 @@ describe("demo records", () => {
     expect(next.allocation).toBeNull();
     expect(next.challenges[0]?.statusLabel).toBe("Demo Challenge");
     expect(next.challenges[0]?.transactionHash).toBeUndefined();
+  });
+});
+
+describe("live evaluation record", () => {
+  const previous: StoredAllocation = {
+    stage: "NORMAL",
+    multiplierBps: 10000,
+    baseEntitlement: 1000,
+    waterUnits: 1000,
+    previousWaterUnits: null,
+    policyVersion: "Rising Policy v1",
+    evaluationId: "eval-1",
+    appliedAt: "2026-10-08T00:00:00.000Z",
+    source: "contract",
+  };
+  const base = {
+    previous,
+    baseEntitlement: 1000,
+    participantType: "farm" as const,
+    appliedAt: "2026-10-08T12:00:00.000Z",
+    transactionId: "tx-live-1",
+    transactionHash: `0x${"ab".repeat(32)}`,
+    submittedUrls: ["https://rising-kira-68d0.vercel.app/evidence/r58-a.txt"],
+    finalityStatus: "Finalized",
+    validatorStatus: "Majority agree",
+    appealDeadline: null,
+    phase: "confirmed" as const,
+  };
+
+  function decide(evaluation: unknown, overrides: Partial<ResolveLiveEvaluationInput> = {}) {
+    return resolveLiveEvaluation({ ...base, evaluation, ...overrides });
+  }
+
+  it("updates the allocation only when the evaluation itself is finalized and applied", () => {
+    const outcome = decide({
+      evaluation_id: "eval-2",
+      status: "Finalized",
+      applied: true,
+      drought_stage: "MODERATE",
+      reservoir_percent: 58,
+      allocation: 800,
+      previous_allocation: 1000,
+      message: "Allocation calculated from the reservoir percentage fetched from the evidence pages and Rising Policy v1.",
+      evidence_readings: [{ url: "https://rising-kira-68d0.vercel.app/evidence/r58-a.txt", status: "fresh", reservoir_percent: 58 }],
+    });
+    expect(outcome.allocationChanged).toBe(true);
+    expect(outcome.evaluation.allocationApplied).toBe(true);
+    expect(outcome.evaluation.statusLabel).toBe("Finalized");
+    expect(outcome.evaluation.evidenceStatus).toBe("consistent");
+    expect(outcome.evaluation.droughtStage).toBe("MODERATE");
+    expect(outcome.evaluation.reservoirPercent).toBe(58);
+    expect(outcome.allocation?.waterUnits).toBe(800);
+    expect(outcome.allocation?.evaluationId).toBe("eval-2");
+    expect(outcome.evaluation.transactionHash).toBe(base.transactionHash);
+    expect(outcome.evaluation.finalityStatus).toBe("Finalized");
+    expect(outcome.evaluation.evidenceReadings).toHaveLength(1);
+    expect(allocationOutcomeCopy(outcome.evaluation)).toBe("Allocation applied from this evaluation.");
+  });
+
+  it("keeps the previous allocation when the new evaluation is disputed", () => {
+    const outcome = decide({
+      evaluation_id: "eval-3",
+      status: "Disputed",
+      applied: false,
+      drought_stage: "",
+      reservoir_percent: null,
+      allocation: 1000,
+      previous_allocation: 1000,
+      message: "Evidence sources conflict. Existing allocations remain active until review is complete.",
+      evidence_readings: [
+        { url: "https://rising-kira-68d0.vercel.app/evidence/r58-c.txt", status: "fresh", reservoir_percent: 58 },
+        { url: "https://rising-kira-68d0.vercel.app/evidence/r30-c.txt", status: "fresh", reservoir_percent: 30 },
+      ],
+    });
+    expect(outcome.allocationChanged).toBe(false);
+    expect(outcome.evaluation.allocationApplied).toBe(false);
+    expect(outcome.evaluation.statusLabel).toBe("Disputed");
+    expect(outcome.evaluation.evidenceStatus).toBe("conflict");
+    expect(outcome.evaluation.evidenceStatus).not.toBe("consistent");
+    expect(outcome.evaluation.droughtStage).toBeNull();
+    expect(outcome.evaluation.contractStage).toBeNull();
+    expect(outcome.allocation).toBe(previous);
+    expect(outcome.allocation?.waterUnits).toBe(1000);
+    expect(outcome.evaluation.transactionHash).toBe(base.transactionHash);
+    expect(outcome.evaluation.evidenceReadings).toHaveLength(2);
+    expect(allocationOutcomeCopy(outcome.evaluation)).toBe("The previous allocation remains active.");
+    expect(`${outcome.evaluation.statusLabel} ${allocationOutcomeCopy(outcome.evaluation)} ${outcome.evaluation.message}`).not.toMatch(
+      /applied|consistent/i,
+    );
+  });
+
+  it("keeps the previous allocation when the new evaluation is inconclusive", () => {
+    const outcome = decide({
+      evaluation_id: "eval-4",
+      status: "Inconclusive",
+      applied: false,
+      drought_stage: "",
+      reservoir_percent: null,
+      allocation: 1000,
+      previous_allocation: 1000,
+      message: "Insufficient current evidence. The previous allocation remains active.",
+      evidence_readings: [{ url: "https://rising-kira-68d0.vercel.app/evidence/stale-44.txt", status: "stale", reservoir_percent: 44 }],
+    });
+    expect(outcome.allocationChanged).toBe(false);
+    expect(outcome.evaluation.allocationApplied).toBe(false);
+    expect(outcome.evaluation.statusLabel).toBe("Inconclusive");
+    expect(outcome.evaluation.evidenceStatus).toBe("insufficient");
+    expect(outcome.evaluation.evidenceStatus).not.toBe("consistent");
+    expect(outcome.allocation).toBe(previous);
+    expect(outcome.evaluation.evidenceReadings).toHaveLength(1);
+    expect(`${outcome.evaluation.statusLabel} ${allocationOutcomeCopy(outcome.evaluation)} ${outcome.evaluation.message}`).not.toMatch(
+      /applied|consistent/i,
+    );
+  });
+
+  it("does not treat the previous allocation as a newly applied result when the evaluation record is missing", () => {
+    const outcome = decide(null);
+    expect(outcome.allocationChanged).toBe(false);
+    expect(outcome.evaluation.allocationApplied).toBe(false);
+    expect(outcome.evaluation.evidenceStatus).not.toBe("consistent");
+    expect(outcome.evaluation.statusLabel).not.toBe("Finalized");
+    expect(outcome.allocation).toBe(previous);
+  });
+
+  it("reads the latest evaluation id and then that evaluation, not the current allocation", async () => {
+    const calls: string[] = [];
+    const result = await readConfirmedEvaluation(
+      "0x5F85c75F8442b92ba66C30371CEf6cF3D7B4c650",
+      ["get_latest_evaluation_id", "get_evaluation", "get_current_allocation"],
+      async (method, args) => {
+        calls.push(`${method}:${JSON.stringify(args)}`);
+        if (method === "get_latest_evaluation_id") return "eval-3";
+        return { evaluation_id: "eval-3", status: "Disputed", applied: false, allocation: 1000 };
+      },
+    );
+    expect(calls).toEqual([
+      'get_latest_evaluation_id:["0x5F85c75F8442b92ba66C30371CEf6cF3D7B4c650"]',
+      'get_evaluation:["eval-3"]',
+    ]);
+    expect(calls.join(" ")).not.toContain("get_current_allocation");
+    expect(result.id).toBe("eval-3");
+    const outcome = decide(result.evaluation);
+    expect(outcome.evaluation.allocationApplied).toBe(false);
+    expect(outcome.allocationChanged).toBe(false);
+  });
+
+  it("keeps the confirmed evaluation path from rereading the prior allocation", () => {
+    const source = readFileSync(resolve("src/components/RisingProvider.tsx"), "utf8");
+    const requestStart = source.indexOf("const requestEvaluation");
+    const challengeStart = source.indexOf("const submitChallenge");
+    const request = source.slice(requestStart, challengeStart);
+    expect(request).toContain("readConfirmedEvaluation");
+    expect(request).not.toContain("get_current_allocation");
+    expect(request).not.toContain('evidenceStatus: "consistent"');
   });
 });
 

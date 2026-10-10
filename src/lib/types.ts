@@ -131,6 +131,7 @@ export interface EvaluationRecord {
   createdAt: string;
   contractStage: DroughtStage | null;
   contractAllocation: number | null;
+  evidenceReadings?: unknown[];
 }
 
 export interface ChallengeRecord {

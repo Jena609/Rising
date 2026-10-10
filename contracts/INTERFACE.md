@@ -12,12 +12,15 @@ get_participant(wallet_address)
 request_drought_evaluation(basin_id, evidence_urls)
 get_current_allocation(wallet_address)
 get_evaluation(evaluation_id)
+get_latest_evaluation_id(wallet_address)
 challenge_evaluation(evaluation_id, alternative_evidence_url, reason)
 ```
 
 Use the real deployed interface if the names or argument types differ. Put that ABI in `src/config/contract-abi.json` or in `NEXT_PUBLIC_GENLAYER_ABI`.
 
-`contracts/rising_water.py` is deployed on GenLayer Studio Next at `0x55FF3ea094d4EbB0Edbbf105ab1D1e9c1f7150a1`. Do not point Rising at a Studionet or Bradbury address. The earlier contracts `0x8328a41d0f3D9a7aC2d1C5CD9439164128A645a9` and `0x16091331A1eC3761Fa6A850f9F71eAf53755a8BD` are not the current deployment.
+`contracts/rising_water.py` is deployed on GenLayer Studio Next at `0xD1d2A9A138bd01efaF8b44826C94095a7Ce94fb3`. Do not point Rising at a Studionet or Bradbury address. The earlier contracts `0x55FF3ea094d4EbB0Edbbf105ab1D1e9c1f7150a1`, `0x8328a41d0f3D9a7aC2d1C5CD9439164128A645a9`, and `0x16091331A1eC3761Fa6A850f9F71eAf53755a8BD` are not the current deployment.
+
+`request_drought_evaluation` returns an id such as `eval-1` and stores that same id in `latest_evaluation_by_wallet` for the caller. `get_latest_evaluation_id` returns it, or an empty string when that wallet has no evaluation. The returned evaluation keeps `status`, `applied`, `evidence_readings`, `allocation`, `drought_stage`, `reservoir_percent`, and `message`. A disputed or inconclusive evaluation leaves the stored allocation unchanged. The frontend must read that evaluation before it changes the allocation shown for the transaction.
 
 The contract stores the participant and applies Rising Policy v1. It fetches each https evidence page inside a GenLayer equivalence block. A usable page must contain a `Rising-Evidence` record, `Freshness: fresh`, a `Reservoir percent` line, and an `Observed` date within 48 hours of the validator clock. A future date, a malformed date, or any freshness label other than `fresh` is not usable. The `Freshness: fresh` label cannot keep an old date. The stage follows that percentage: above 70 is Normal, 40 through 70 is Moderate, 20 through below 40 is Severe, and below 20 is Emergency. A word in the URL is ignored. A page that cannot be fetched, or that has no Rising evidence record, leaves the previous allocation unchanged. Disagreeing fresh percentages leave it unchanged as well. The contract does not ask a model to multiply the entitlement. Validator consensus still applies to each write.
 

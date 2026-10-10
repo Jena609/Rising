@@ -46,6 +46,10 @@ Automated tests cover policy arithmetic, evidence conflicts, configuration gates
 - Missing or stale sources keep the previous allocation.
 - The final water-unit amount matches base entitlement times the multiplier.
 - Live Mode does not show Finalized until the GenLayer receipt says the transaction is finalized and execution succeeded.
+- After that receipt, Live Mode reads `get_latest_evaluation_id` and then `get_evaluation`. It does not treat the previous allocation as the new result.
+- A finalized evaluation with `applied: true` updates the allocation.
+- A disputed evaluation keeps the previous allocation. The screen says Disputed and does not say Applied or Consistent.
+- An inconclusive evaluation keeps the previous allocation. The screen says Inconclusive and does not say Applied or Consistent.
 
 ## Challenge
 

@@ -2,9 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { Address } from "viem";
-import { decideAllocation } from "@/lib/allocation";
-import { calculateAllocation } from "@/lib/policy";
-import { methodAvailable, risingConfig, type ExpectedMethod } from "@/lib/config";
+import { methodAvailable, risingConfig } from "@/lib/config";
 import { toReadableError } from "@/lib/errors";
 import {
   loadContractMethods,
@@ -15,9 +13,14 @@ import {
 } from "@/lib/genlayer-client";
 import type { GenLayerObservation } from "@/lib/genlayer-status";
 import { createLocalId } from "@/lib/id";
-import { parseEvaluation, parseParticipant } from "@/lib/parse-contract";
+import {
+  allocationFromCurrentRecord,
+  readConfirmedEvaluation,
+  resolveLiveEvaluation,
+} from "@/lib/live-evaluation";
+import { parseParticipant } from "@/lib/parse-contract";
 import { liveSubmitBlockReason } from "@/lib/studio-next";
-import { BASIN_ID, BASIN_NAME, multiplierBps, POLICY_VERSION } from "@/lib/policy";
+import { BASIN_ID, BASIN_NAME } from "@/lib/policy";
 import {
   applyChallenge,
   applyDemoEvaluation,
@@ -27,7 +30,7 @@ import {
 
 import { clearSession, emptySession, loadSession, saveSession } from "@/lib/storage";
 import { demoPhase, demoSteps, livePhase, liveSteps } from "@/lib/timeline";
-import type { EvaluationRecord, EvidenceAssessmentStatus, ParticipantRecord, SessionState, StoredAllocation, TransactionRecord } from "@/lib/types";
+import type { EvaluationRecord, ParticipantRecord, SessionState, StoredAllocation, TransactionRecord } from "@/lib/types";
 import type { ChallengeValue, RegistrationValue } from "@/lib/validation";
 import { useWallet } from "@/components/WalletProvider";
 
@@ -144,59 +147,28 @@ export function RisingProvider({ children }: { children: React.ReactNode }) {
         let evaluation: EvaluationRecord | null = null;
         if (methodAvailable("get_current_allocation", methods)) {
           const allocationRaw = await readContractMethod("get_current_allocation", [walletAddress], methods);
-          const allocationParsed = parseEvaluation(allocationRaw);
-          if (allocationParsed?.stage && allocationParsed.allocation !== null && parsed.participantType) {
-            allocation = {
-              stage: allocationParsed.stage,
-              multiplierBps: multiplierBps(allocationParsed.stage, parsed.participantType),
+          allocation = allocationFromCurrentRecord(allocationRaw, parsed.baseEntitlement, parsed.participantType);
+        }
+        if (methodAvailable("get_latest_evaluation_id", methods) && methodAvailable("get_evaluation", methods)) {
+          const readBack = await readConfirmedEvaluation(walletAddress, methods, (method, args) =>
+            readContractMethod(method, args, methods),
+          );
+          if (readBack.id) {
+            const outcome = resolveLiveEvaluation({
+              evaluation: readBack.evaluation,
+              previous: allocation,
               baseEntitlement: parsed.baseEntitlement,
-              waterUnits: allocationParsed.allocation,
-              previousWaterUnits: null,
-              policyVersion: POLICY_VERSION,
-              evaluationId: allocationParsed.id ?? "contract-allocation",
+              participantType: parsed.participantType,
               appliedAt: "",
-              source: "contract",
-            };
-            if (allocationParsed.id && methodAvailable("get_evaluation", methods)) {
-              const evaluationRaw = await readContractMethod("get_evaluation", [allocationParsed.id], methods);
-              const evaluationParsed = parseEvaluation(evaluationRaw);
-              const record = evaluationRaw && typeof evaluationRaw === "object" ? (evaluationRaw as Record<string, unknown>) : {};
-              const urls = Array.isArray(record.evidence_urls)
-                ? record.evidence_urls.filter((item): item is string => typeof item === "string")
-                : [];
-              const contractStatus = typeof record.status === "string" ? record.status : evaluationParsed?.statusLabel;
-              const evidenceStatus: EvidenceAssessmentStatus =
-                contractStatus === "Disputed" ? "conflict" : contractStatus === "Inconclusive" ? "insufficient" : "consistent";
-              evaluation = {
-                id: allocationParsed.id,
-                mode: "live",
-                basinId: parsed.basinId ?? BASIN_ID,
-                statusLabel: contractStatus ?? "Contract record",
-                evidenceStatus,
-                droughtStage: evaluationParsed?.stage ?? allocationParsed.stage,
-                reservoirPercent: evaluationParsed?.reservoirPercent ?? allocationParsed.reservoirPercent,
-                riverFlowStatus: "Not available",
-                sources: [],
-                submittedUrls: urls,
-                policyVersion: typeof record.policy_version === "string" ? record.policy_version : POLICY_VERSION,
-                message:
-                  typeof record.message === "string"
-                    ? record.message
-                    : "This allocation was read from the contract.",
-                allocationApplied: record.applied !== false,
-                currentAllocation: evaluationParsed?.allocation ?? allocationParsed.allocation,
-                previousAllocation: typeof record.previous_allocation === "number" ? record.previous_allocation : null,
-                multiplierBps: multiplierBps(allocationParsed.stage, parsed.participantType),
-                transactionId: "contract-read",
-                contractEvaluationId: allocationParsed.id,
-                appealDeadline: null,
-                validatorStatus: "Not included in the contract read.",
-                finalityStatus: "The allocation was read from the contract. This browser session does not hold the transaction receipt.",
-                createdAt: "",
-                contractStage: evaluationParsed?.stage ?? allocationParsed.stage,
-                contractAllocation: evaluationParsed?.allocation ?? allocationParsed.allocation,
-              };
-            }
+              transactionId: "contract-read",
+              submittedUrls: [],
+              finalityStatus: "The evaluation was read from the contract. This browser session does not hold the transaction receipt.",
+              validatorStatus: "Not included in the contract read.",
+              appealDeadline: null,
+              phase: "confirmed",
+            });
+            evaluation = outcome.evaluation;
+            allocation = outcome.allocation;
           }
         }
         if (!active) return;
@@ -219,12 +191,31 @@ export function RisingProvider({ children }: { children: React.ReactNode }) {
               (item.phase === "wallet-approval" || item.phase === "submitted" || item.phase === "waiting"),
           );
           if (pendingWrite) return current;
+          let shown = evaluation;
+          if (evaluation) {
+            const loaded = evaluation;
+            const prior = current.evaluations.find(
+              (item) => item.contractEvaluationId === loaded.contractEvaluationId && item.transactionHash,
+            );
+            if (prior) {
+              shown = {
+                ...loaded,
+                transactionHash: prior.transactionHash,
+                transactionId: prior.transactionId,
+                finalityStatus: prior.finalityStatus,
+                validatorStatus: prior.validatorStatus,
+                appealDeadline: prior.appealDeadline ?? loaded.appealDeadline,
+                submittedUrls: prior.submittedUrls.length > 0 ? prior.submittedUrls : loaded.submittedUrls,
+                createdAt: prior.createdAt || loaded.createdAt,
+              };
+            }
+          }
           return {
             ...current,
             participant,
             allocation,
             allocationHistory: allocation ? [allocation] : [],
-            evaluations: evaluation ? [evaluation] : [],
+            evaluations: shown ? [shown] : [],
           };
         });
       } catch (error) {
@@ -558,106 +549,50 @@ export function RisingProvider({ children }: { children: React.ReactNode }) {
         const written = await writeContractMethod("request_drought_evaluation", [BASIN_ID, urls], wallet.address, methods);
         patchTransaction(id, { hash: written.hash, phase: "submitted" });
         const observation = await trackLive(id, written.hash, written.transport);
-        let contractStage = null;
-        let contractAllocation: number | null = null;
-        let contractEvaluationId: string | null = null;
-        let statusFromContract: string | null = null;
-        if (observation.phase === "confirmed" && methodAvailable("get_current_allocation", methods)) {
+        let readBack: { id: string | null; evaluation: unknown } = { id: null, evaluation: null };
+        if (observation.phase === "confirmed") {
           try {
-            const raw = await readContractMethod("get_current_allocation", [wallet.address], methods);
-            const parsed = parseEvaluation(raw);
-            contractStage = parsed?.stage ?? null;
-            contractAllocation = parsed?.allocation ?? null;
-            statusFromContract = parsed?.statusLabel ?? null;
+            readBack = await readConfirmedEvaluation(wallet.address, methods, (method, args) =>
+              readContractMethod(method, args, methods),
+            );
           } catch (error) {
             patchTransaction(id, { technicalDetail: toReadableError(error).technical });
           }
         }
-        const decision = decideAllocation({
+        const outcome = resolveLiveEvaluation({
+          evaluation: readBack.evaluation,
           previous: session.allocation,
-          canUpdate: observation.phase === "confirmed" && Boolean(contractStage),
-          stage: contractStage,
-          evidenceStatus: "consistent",
           baseEntitlement: session.participant.baseEntitlement,
           participantType: session.participant.participantType,
-          evaluationId: createLocalId("eval"),
           appliedAt: new Date().toISOString(),
-          source: "contract",
-          blockedMessage:
-            observation.phase === "confirmed"
-              ? "The transaction is confirmed, but the contract has not returned a drought stage. The final allocation is not available yet."
-              : observation.evaluationResult,
-        });
-        let message = decision.message;
-        if (decision.applied && contractStage && contractAllocation !== null) {
-          const local = calculateAllocation(session.participant.baseEntitlement, contractStage, session.participant.participantType);
-          if (local !== contractAllocation) {
-            message = `The contract allocation is ${contractAllocation} water units. The local policy check is ${local}. Rising is showing the contract amount.`;
-          }
-        }
-        const evaluationId = decision.allocation?.evaluationId ?? createLocalId("eval");
-        const evaluation: EvaluationRecord = {
-          id: evaluationId,
-          mode: "live",
-          basinId: BASIN_ID,
-          statusLabel:
-            statusFromContract ??
-            (observation.validatorStatus === "Disputed"
-              ? "Disputed"
-              : observation.validatorStatus === "Inconclusive"
-                ? "Inconclusive"
-                : observation.phase === "failed"
-                  ? "Failed"
-                  : observation.finalityStatus === "Finalized" && observation.phase === "confirmed"
-                    ? "Finalized"
-                    : observation.phase === "confirmed"
-                      ? "Confirmed"
-                      : observation.validatorStatus),
-          evidenceStatus: "consistent",
-          droughtStage: decision.applied ? contractStage : null,
-          reservoirPercent: null,
-          riverFlowStatus: "Not available",
-          sources: [],
-          submittedUrls: urls,
-          policyVersion: POLICY_VERSION,
-          message,
-          allocationApplied: decision.applied,
-          currentAllocation: contractAllocation ?? decision.currentAllocation,
-          previousAllocation: decision.previousAllocation,
-          multiplierBps: decision.multiplierBps,
           transactionId: id,
           transactionHash: written.hash,
-          contractEvaluationId,
-          appealDeadline: observation.appealDeadline,
-          validatorStatus: observation.validatorStatus,
+          submittedUrls: urls,
           finalityStatus: observation.finalityStatus,
-          createdAt: new Date().toISOString(),
-          contractStage,
-          contractAllocation,
-        };
+          validatorStatus: observation.validatorStatus,
+          appealDeadline: observation.appealDeadline,
+          phase: observation.phase === "confirmed" ? "confirmed" : observation.phase === "failed" ? "failed" : "waiting",
+        });
         setSession((current) => ({
           ...current,
-          evaluations: [evaluation, ...current.evaluations],
-          allocation:
-            decision.applied && decision.allocation
-              ? {
-                  ...decision.allocation,
-                  waterUnits: contractAllocation ?? decision.allocation.waterUnits,
-                }
-              : current.allocation,
+          evaluations: [outcome.evaluation, ...current.evaluations],
+          allocation: outcome.allocationChanged ? outcome.allocation : current.allocation,
           allocationHistory:
-            decision.applied && decision.allocation
-              ? [
-                  { ...decision.allocation, waterUnits: contractAllocation ?? decision.allocation.waterUnits },
-                  ...current.allocationHistory,
-                ]
+            outcome.allocationChanged && outcome.allocation
+              ? [outcome.allocation, ...current.allocationHistory]
               : current.allocationHistory,
         }));
+        const confirmedMessage =
+          outcome.evaluation.statusLabel === "Finalized"
+            ? "The evaluation is Finalized. The allocation was updated."
+            : outcome.evaluation.statusLabel === "Disputed"
+              ? "The evaluation is Disputed. The previous allocation remains active."
+              : outcome.evaluation.statusLabel === "Inconclusive"
+                ? "The evaluation is Inconclusive. The previous allocation remains active."
+                : "The evaluation transaction is confirmed. The previous allocation remains active.";
         pushToast(
           observation.phase === "confirmed" ? "success" : observation.phase === "failed" ? "error" : "info",
-          observation.phase === "confirmed"
-            ? "The evaluation transaction is confirmed."
-            : observation.evaluationResult,
+          observation.phase === "confirmed" ? confirmedMessage : observation.evaluationResult,
         );
       } catch (error) {
         const readable = toReadableError(error);

@@ -75,6 +75,7 @@ export const EXPECTED_METHODS = [
   "request_drought_evaluation",
   "get_current_allocation",
   "get_evaluation",
+  "get_latest_evaluation_id",
   "challenge_evaluation",
 ] as const;
 

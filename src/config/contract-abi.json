@@ -1,1 +1,63 @@
-[]
+[
+  {
+    "type": "function",
+    "name": "register_participant",
+    "stateMutability": "nonpayable",
+    "inputs": [
+      { "name": "basin_id", "type": "string" },
+      { "name": "participant_type", "type": "string" },
+      { "name": "participant_label", "type": "string" },
+      { "name": "base_entitlement", "type": "uint256" }
+    ],
+    "outputs": []
+  },
+  {
+    "type": "function",
+    "name": "get_participant",
+    "stateMutability": "view",
+    "inputs": [{ "name": "wallet_address", "type": "string" }],
+    "outputs": [{ "name": "", "type": "tuple" }]
+  },
+  {
+    "type": "function",
+    "name": "request_drought_evaluation",
+    "stateMutability": "nonpayable",
+    "inputs": [
+      { "name": "basin_id", "type": "string" },
+      { "name": "evidence_urls", "type": "string[]" }
+    ],
+    "outputs": [{ "name": "", "type": "string" }]
+  },
+  {
+    "type": "function",
+    "name": "get_current_allocation",
+    "stateMutability": "view",
+    "inputs": [{ "name": "wallet_address", "type": "string" }],
+    "outputs": [{ "name": "", "type": "tuple" }]
+  },
+  {
+    "type": "function",
+    "name": "get_evaluation",
+    "stateMutability": "view",
+    "inputs": [{ "name": "evaluation_id", "type": "string" }],
+    "outputs": [{ "name": "", "type": "tuple" }]
+  },
+  {
+    "type": "function",
+    "name": "get_latest_evaluation_id",
+    "stateMutability": "view",
+    "inputs": [{ "name": "wallet_address", "type": "string" }],
+    "outputs": [{ "name": "", "type": "string" }]
+  },
+  {
+    "type": "function",
+    "name": "challenge_evaluation",
+    "stateMutability": "nonpayable",
+    "inputs": [
+      { "name": "evaluation_id", "type": "string" },
+      { "name": "alternative_evidence_url", "type": "string" },
+      { "name": "reason", "type": "string" }
+    ],
+    "outputs": [{ "name": "", "type": "string" }]
+  }
+]

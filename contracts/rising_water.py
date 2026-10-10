@@ -127,6 +127,7 @@ class RisingWater(gl.contract.Contract):
     participants: gl.storage.TreeMap[str, str]
     allocations: gl.storage.TreeMap[str, str]
     evaluations: gl.storage.TreeMap[str, str]
+    latest_evaluation_by_wallet: gl.storage.TreeMap[str, str]
     challenges: gl.storage.TreeMap[str, str]
     evaluation_count: u32
 
@@ -217,6 +218,7 @@ class RisingWater(gl.contract.Contract):
 
         self.evaluation_count = int(self.evaluation_count) + 1
         evaluation_id = f"eval-{int(self.evaluation_count)}"
+        self.latest_evaluation_by_wallet[wallet] = evaluation_id
         record = {
             "evaluation_id": evaluation_id,
             "wallet_address": wallet,
@@ -259,6 +261,13 @@ class RisingWater(gl.contract.Contract):
         if raw is None:
             return {}
         return json.loads(raw)
+
+    @gl.public.view
+    def get_latest_evaluation_id(self, wallet_address: str) -> str:
+        raw = self.latest_evaluation_by_wallet.get(_wallet_key(wallet_address))
+        if raw is None:
+            return ""
+        return str(raw)
 
     @gl.public.write
     def challenge_evaluation(

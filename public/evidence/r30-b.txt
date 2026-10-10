@@ -3,5 +3,5 @@ Basin: green-valley
 Kind: reservoir
 Reservoir percent: 30
 Freshness: fresh
-Observed: 2026-10-08
+Observed: 2026-10-10
 This is a fictional testnet gauge page. It is not a government measurement.

@@ -59,7 +59,7 @@ export function EvaluationRequestPanel() {
         )}
         <p className="text-sm text-muted">
           {risingConfig.liveReady
-            ? "The contract reads the reservoir percentage on each fetched page. It must return that stage before a final allocation is shown."
+            ? "After the transaction is finalized, Rising reads the evaluation created by that transaction. A disputed or inconclusive result keeps the previous allocation."
             : `${DEMO_DATA_LABEL} Demo Mode does not retrieve these URLs. The preview uses the selected fictional scenario.`}
         </p>
         <div>
